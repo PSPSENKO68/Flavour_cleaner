@@ -30,6 +30,15 @@ class FlavourAI_GUI(tk.Tk):
         self.geometry("1000x700")
         self.configure(padx=10, pady=10)
 
+        # Set Window Icon
+        icon_path = os.path.join(parent_dir, "logo", "logo.png")
+        if os.path.exists(icon_path):
+            try:
+                img = tk.PhotoImage(file=icon_path)
+                self.iconphoto(False, img)
+            except Exception:
+                pass
+
         # Style
         style = ttk.Style()
         style.theme_use('clam')
