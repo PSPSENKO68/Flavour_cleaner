@@ -39,8 +39,9 @@ Hệ thống sử dụng mô hình học sâu cấu trúc PhoBERT (`vinai/phober
   - *Huấn luyện:* Chia tập dữ liệu theo tỷ lệ 90% Train / 10% Test. Sử dụng framework PyTorch và thư viện Transformers Trainer để tinh chỉnh (fine-tune) qua 15 chu kỳ (epochs) với learning_rate=3e-5, batch_size=16.
   - *Xuất bản:* Sau khi train xong, mô hình gốc nặng nề được convert sang định dạng ONNX (bằng `optimum-cli`) để loại bỏ hoàn toàn sự phụ thuộc vào thư viện PyTorch, giúp tăng tốc độ xử lý khi chạy file `.exe` trên máy tính cá nhân.
 - **Cơ chế:** Mô hình phân rã văn bản, tính toán xác suất cho từng đoạn nhỏ (token), và gán nhãn `B-PROD` hoặc `I-PROD`. Thư viện AI sẽ tự động gom các token này thành cụm từ hoàn chỉnh.
-- **Sức mạnh ngữ cảnh:** Nhờ cơ chế học sâu, AI có khả năng tự động phớt lờ các cụm từ tiếng Việt không liên quan.
-  - *Ví dụ:* `Hương Bò BEEF EXTRACT POWDER PFE-123` -> Trích xuất: `BEEF EXTRACT POWDER PFE-123` (Không cần dùng luật cắt tiếng Việt).
+- **Sức mạnh ngữ cảnh:** Nhờ cơ chế học sâu, AI xử lý rất thông minh khi đối diện với dữ liệu song ngữ:
+  - *Nếu có cả tiếng Việt và tiếng Anh:* Nó ưu tiên chọn tiếng Anh và phớt lờ tiếng Việt. (Vd: `Hương Bò BEEF EXTRACT POWDER PFE-123` -> Trích xuất: `BEEF EXTRACT POWDER PFE-123`).
+  - *Nếu không có tiếng Anh:* Nó sẽ cố gắng giữ lại tiếng Việt và mã sản phẩm một cách trọn vẹn nhất có thể để không bị mất dữ liệu. (Vd: `Hương cam PPE-123` -> Trích xuất: `Hương cam PPE-123`).
 
 ### 2.2. Thuật toán gọt tiếng Việt bằng Biểu thức chính quy (Anchor Regex)
 Vì mô hình AI thỉnh thoảng bắt nhầm một từ tiếng Việt liền kề vào cụm tiếng Anh, thuật toán Regex (trong `gui_2.py`) hoạt động như một lớp màng lọc. Dưới đây là các biểu thức cụ thể được áp dụng:
