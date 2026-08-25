@@ -20,19 +20,19 @@
 
 ### 1.2. Mô hình kiến trúc hệ thống
 Hệ thống xử lý file Excel cục bộ, bao gồm các bước theo đường ống (Cascading Pipeline):
-1. **AI NER (Chủ đạo):** Sử dụng mô hình Machine Learning (định dạng ONNX) trích xuất thực thể (NER). AI đọc văn bản và trích xuất cụm từ mang nhãn `PROD`.
+1. **Mô hình Học máy NER (Chủ đạo):** Sử dụng mô hình Machine Learning (định dạng ONNX) trích xuất thực thể (NER). Hệ thống đọc văn bản và trích xuất cụm từ mang nhãn `PROD`.
 2. **Regex Post-Processing (Tiền xử lý & Chuẩn hóa):** Dùng biểu thức chính quy gọt bỏ các ký tự thừa và lọc bỏ phần tiếng Việt bị dính vào kết quả của AI.
 3. **Rules Fallback (Dự phòng):** Nếu AI trả về kết quả rỗng, hệ thống dùng thuật toán Heuristic tĩnh (`clean_flavour.py`) để chữa cháy.
 
 ### 1.3. Cấu trúc thư mục hiện tại
 Toàn bộ dự án được thiết kế chạy Offline hoàn toàn.
-* **Giao diện & Lõi AI:** `gui_2.py`
-* **Mô hình Trí tuệ Nhân tạo:** Thư mục `ml_trainer/model_version4/flavour_ner_onnx`
+* **Giao diện & Lõi Hệ thống:** `gui_2.py`
+* **Mô hình Học máy (Machine Learning):** Thư mục `ml_trainer/model_version4/flavour_ner_onnx`
 * **Xử lý ngoại lệ & Dự phòng:** `run_clean.py`, `clean_flavour.py`, `patterns.txt`
 
 ## 2. CƠ CHẾ XỬ LÝ NGÔN NGỮ & THUẬT TOÁN ĐẶC BIỆT
 
-### 2.1. Nhận dạng Thực thể bằng Trí tuệ Nhân tạo (AI - NER)
+### 2.1. Nhận dạng Thực thể bằng Học máy (Machine Learning - NER)
 Hệ thống sử dụng mô hình học sâu cấu trúc `XLMRobertaForTokenClassification` đã được huấn luyện riêng biệt.
 - **Quy trình Huấn luyện (Training):** Mô hình được tinh chỉnh (fine-tuned) từ bản gốc `xlm-roberta-base`. Hàng ngàn dữ liệu hải quan (synthetic data) được tạo ra và gán nhãn thủ công (`B-PROD` cho từ bắt đầu sản phẩm, `I-PROD` cho các từ bên trong). Quá trình huấn luyện diễn ra qua 15 chu kỳ (epochs) bằng framework PyTorch, sau đó xuất ra định dạng ONNX để tăng tốc độ xử lý cục bộ.
 - **Cơ chế:** Mô hình phân rã văn bản, tính toán xác suất cho từng đoạn nhỏ (token), và gán nhãn `B-PROD` hoặc `I-PROD`. Thư viện AI sẽ tự động gom các token này thành cụm từ hoàn chỉnh.
