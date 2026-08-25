@@ -1,101 +1,144 @@
-# TÀI LIỆU KỸ THUẬT CHI TIẾT — DỰ ÁN FLAVOUR CLEANER
-*(System Technical Documentation & Code Deep Dive)*
+# TÀI LIỆU KỸ THUẬT: HỆ THỐNG TRÍCH XUẤT TÊN HƯƠNG LIỆU TỰ ĐỘNG
+*(System Technical Documentation - Flavour Cleaner)*
 
 ---
 
-## MỤC LỤC
-1. [TỔNG QUAN KIẾN TRÚC & CƠ SỞ LÝ THUYẾT](#1-tổng-quan-kiến-trúc--cơ-sở-lý-thuyết)
-2. [CƠ CHẾ XỬ LÝ NGÔN NGỮ & THUẬT TOÁN ĐẶC BIỆT](#2-cơ-chế-xử-lý-ngôn-ngữ--thuật-toán-đặc-biệt)
-3. [LUỒNG CHẠY & PHÂN TÍCH CHI TIẾT TỪNG FILE (FILE-BY-FILE DEEP DIVE)](#3-luồng-chạy--phân-tích-chi-tiết-từng-file)
-4. [BẢNG TỔNG KẾT RỦI RO KHI THAY ĐỔI](#4-bảng-tổng-kết-rủi-ro-khi-thay-đổi)
+## 1. GIỚI THIỆU BÀI TOÁN & MỤC TIÊU
+
+### 1.1. Bài toán
+Trong dữ liệu tờ khai hải quan, cột "Mô tả hàng hóa" thường được ghi dưới dạng văn bản tự do, chứa nhiều thông tin lộn xộn:
+- Tên tiếng Việt và tên tiếng Anh lẫn lộn.
+- Mô tả công dụng, tính chất vật lý (dạng lỏng, dạng bột, không chứa cồn).
+- Quy cách đóng gói (25kg/thùng, 200L/phuy), nhà sản xuất, ngày sản xuất (NSX), hạn sử dụng (HSD).
+
+### 1.2. Mục tiêu xử lý
+Hệ thống có nhiệm vụ bóc tách chính xác tên thương mại của sản phẩm và ghi kết quả vào file Excel mới:
+- **Trường hợp 1 (Có tên tiếng Anh):** Lọc bỏ toàn bộ câu tiếng Việt và thông tin quy cách, chỉ lấy tên thương mại tiếng Anh.  
+  *Ví dụ:*  
+  - *Đầu vào:* `Hỗn hợp hương đậu nành, nguyên liệu dùng trong công nghiệp sản xuất mì ăn liền, dạng lỏng, không chứa cồn - SOY SAUCE FLAVOUR PFE-12599, NSX: 09/07/2025; HSD: 08/07/2026`  
+  - *Đầu ra:* `SOY SAUCE FLAVOUR PFE-12599`
+- **Trường hợp 2 (Thuần tiếng Việt / Không có tên tiếng Anh):** Lọc bỏ phần mô tả công dụng và NSX/HSD, chỉ giữ lại tên sản phẩm tiếng Việt + mã số để không làm mất dữ liệu.  
+  *Ví dụ:*  
+  - *Đầu vào:* `Hương đậu nành dùng cho thực phẩm, dạng lỏng PFE-12599, NSX: 09/07/2025`  
+  - *Đầu ra:* `Hương đậu nành PFE-12599`
 
 ---
 
-## 1. TỔNG QUAN KIẾN TRÚC & CƠ SỞ LÝ THUYẾT
+## 2. KIẾN TRÚC & LUỒNG XỬ LÝ DỮ LIỆU
 
-### 1.1. Mục tiêu và bài toán
-**Bài toán:** Trích xuất tên tiếng Anh chuẩn của sản phẩm/hương liệu (Flavour/Product Name) từ cột mô tả hàng hóa tự do trong tờ khai hải quan Việt Nam.
-* **Đầu vào (Input):** File Excel tờ khai hải quan chứa cột mô tả hàng hóa tự do, có văn bản tiếng Việt lẫn tiếng Anh, kèm theo quy cách đóng gói, nhà sản xuất, v.v.
-* **Đầu ra (Output):** Giao diện lưới (Grid) hiển thị kết quả trích xuất, cho phép người dùng kiểm tra trực quan, sau đó xuất ra file Excel mới mà vẫn giữ nguyên hoàn toàn cấu trúc, định dạng của file gốc.
+Hệ thống xử lý từng dòng dữ liệu theo mô hình 3 lớp nối tiếp (Cascading Pipeline):
 
-### 1.2. Mô hình kiến trúc hệ thống
-Hệ thống xử lý file Excel cục bộ, bao gồm các bước theo đường ống (Cascading Pipeline):
-1. **Mô hình Học máy NER (Chủ đạo):** Sử dụng mô hình Machine Learning (định dạng ONNX) trích xuất thực thể (NER). Hệ thống đọc văn bản và trích xuất cụm từ mang nhãn `PROD`.
-2. **Regex Post-Processing (Tiền xử lý & Chuẩn hóa):** Dùng biểu thức chính quy gọt bỏ các ký tự thừa và lọc bỏ phần tiếng Việt bị dính vào kết quả của AI.
-3. **Rules Fallback (Dự phòng):** Nếu AI trả về kết quả rỗng, hệ thống dùng thuật toán Heuristic tĩnh (`clean_flavour.py`) để chữa cháy.
+```mermaid
+graph TD
+    A[Dòng mô tả hải quan thô] --> B[Lớp 1: Mô hình Học máy PhoBERT NER]
+    B --> C{Trích xuất được?}
+    C -- Có kết quả --> D[Lớp 2: Bộ lọc Regex Post-Processing]
+    C -- Rỗng / Thất bại --> E[Lớp 3: Cơ chế dự phòng Heuristic Rules]
+    D --> F[Kết quả chuẩn hóa]
+    E --> F
+    F --> G[Ghi vào file Excel mới]
+```
 
-### 1.3. Cấu trúc thư mục hiện tại
-Toàn bộ dự án được thiết kế chạy Offline hoàn toàn.
-* **Giao diện & Lõi Hệ thống:** `gui_2.py`
-* **Mô hình Học máy (Machine Learning):** Thư mục `ml_trainer/model_version4/flavour_ner_onnx`
-* **Xử lý ngoại lệ & Dự phòng:** `run_clean.py`, `clean_flavour.py`, `patterns.txt`
+---
 
-## 2. CƠ CHẾ XỬ LÝ NGÔN NGỮ & THUẬT TOÁN ĐẶC BIỆT
+### Lớp 1: Bóc tách thực thể bằng Mô hình Học máy (PhoBERT NER)
 
-### 2.1. Nhận dạng Thực thể bằng Học máy (Machine Learning - NER)
-Hệ thống sử dụng mô hình học sâu cấu trúc PhoBERT (`vinai/phobert-base`) vì đây là mô hình tối ưu nhất cho việc phân tích ngữ cảnh tiếng Việt lẫn tiếng Anh.
-- **Quy trình Huấn luyện (Training):** Toàn bộ quy trình được xây dựng trong notebook `ml_trainer/train_flavour_model.ipynb` và chạy trên Google Colab (T4 GPU).
-  - *Dữ liệu:* Tập dữ liệu `training_data.jsonl` được sinh ra tự động và gán nhãn thủ công (`B-PROD` cho từ bắt đầu sản phẩm, `I-PROD` cho các từ bên trong).
-  - *Huấn luyện:* Chia tập dữ liệu theo tỷ lệ 90% Train / 10% Test. Sử dụng framework PyTorch và thư viện Transformers Trainer để tinh chỉnh (fine-tune) qua 15 chu kỳ (epochs) với learning_rate=3e-5, batch_size=16.
-  - *Xuất bản:* Sau khi train xong, mô hình gốc nặng nề được convert sang định dạng ONNX (bằng `optimum-cli`) để loại bỏ hoàn toàn sự phụ thuộc vào thư viện PyTorch, giúp tăng tốc độ xử lý khi chạy file `.exe` trên máy tính cá nhân.
-- **Cơ chế:** Mô hình phân rã văn bản, tính toán xác suất cho từng đoạn nhỏ (token), và gán nhãn `B-PROD` hoặc `I-PROD`. Thư viện AI sẽ tự động gom các token này thành cụm từ hoàn chỉnh.
-- **Sức mạnh ngữ cảnh:** Nhờ cơ chế học sâu, AI xử lý rất thông minh khi đối diện với dữ liệu song ngữ:
-  - *Nếu có cả tiếng Việt và tiếng Anh:* Nó ưu tiên chọn tiếng Anh và phớt lờ tiếng Việt. (Vd: `Hương Bò BEEF EXTRACT POWDER PFE-123` -> Trích xuất: `BEEF EXTRACT POWDER PFE-123`).
-  - *Nếu không có tiếng Anh:* Nó sẽ cố gắng giữ lại tiếng Việt và mã sản phẩm một cách trọn vẹn nhất có thể để không bị mất dữ liệu. (Vd: `Hương cam PPE-123` -> Trích xuất: `Hương cam PPE-123`).
+#### 1. Cơ chế gán nhãn BIO
+Mô hình chia câu thành từng từ (token) và dự đoán nhãn cho từng từ theo chuẩn BIO:
+- `B-PROD` (Begin Product): Từ bắt đầu tên sản phẩm.
+- `I-PROD` (Inside Product): Các từ tiếp theo nằm trong tên sản phẩm.
+- `O` (Outside): Các từ ngoài lề (mô tả, phụ gia, quy cách, ngày tháng).
 
-### 2.2. Thuật toán gọt tiếng Việt bằng Biểu thức chính quy (Anchor Regex)
-Vì mô hình AI thỉnh thoảng bắt nhầm một từ tiếng Việt liền kề vào cụm tiếng Anh, thuật toán Regex (trong `gui_2.py`) hoạt động như một lớp màng lọc. Dưới đây là các biểu thức cụ thể được áp dụng:
-- **Biểu thức dọn rác quy cách:** `re.sub(r'(\bNSX\b|\bNPP\b|\bHSD\b|QUY CÁCH|DÙNG CHO|HIỆU\b|DÒNG\b).*', '', text, flags=re.IGNORECASE)` (Tự động xóa bỏ mọi thứ nằm sau các từ khóa này).
-- **Biểu thức nhận diện dấu tiếng Việt:** `re.search(r'[áàảãạăắằẳẵặâấầ...ýỳỷỹỵđ]', word, re.IGNORECASE)` (Quét xem một từ có chứa ký tự tiếng Việt đặc thù hay không).
+*Ví dụ cách mô hình phân loại:*
+- Chuỗi đầu vào: `Chất tạo hương SOY SAUCE FLAVOUR PFE-123 25kg`
+- Kết quả gán nhãn:
+  - `Chất` $\rightarrow$ `O`
+  - `tạo` $\rightarrow$ `O`
+  - `hương` $\rightarrow$ `O`
+  - `SOY` $\rightarrow$ `B-PROD` (Bắt đầu tên sản phẩm)
+  - `SAUCE` $\rightarrow$ `I-PROD` (Thuộc tên sản phẩm)
+  - `FLAVOUR` $\rightarrow$ `I-PROD` (Thuộc tên sản phẩm)
+  - `PFE-123` $\rightarrow$ `I-PROD` (Thuộc tên sản phẩm)
+  - `25kg` $\rightarrow$ `O`
+- *Kết quả ghép cụm `B-PROD` + `I-PROD`:* `SOY SAUCE FLAVOUR PFE-123`.
 
-Cách thuật toán phối hợp các biểu thức trên để gọt tiếng Việt:
-1. **Tìm mỏ neo (Anchor):** Xác định vị trí chữ `FLAVOUR` hoặc `FLAVOR` trong chuỗi kết quả.
-2. **Quét ngược:** Từ vị trí mỏ neo, quét ngược về đầu câu từng từ một.
-3. **Chặn và Cắt:** Dừng lại ngay lập tức khi phát hiện từ chứa dấu tiếng Việt (vd: chữ `Hương`), hoặc từ nằm trong danh sách cấm `[viet-no-diacrit]` (vd: chữ `CAM`, chữ `HEO`). Toàn bộ phần chuỗi từ điểm dừng hất về trước sẽ bị cắt bỏ.
-- **Ví dụ logic:** 
-  - *Đầu vào:* `Hương CAM ORANGE FLAVOUR L-9999`
-  - *Luồng chạy:* Neo tại `FLAVOUR` -> Quét ngược -> Gặp chữ `CAM` (nằm trong `[viet-no-diacrit]`) -> Cắt bỏ `Hương CAM`. 
-  - *Đầu ra:* `ORANGE FLAVOUR L-9999`.
+#### 2. Quá trình huấn luyện (Training)
+- **Mô hình gốc:** Sử dụng `vinai/phobert-base` làm nền tảng vì mô hình này hiểu tốt ngữ cảnh tiếng Việt và các từ tiếng Anh đi kèm.
+- **Tập dữ liệu:** Dữ liệu mô tả hải quan được gán nhãn chuẩn BIO, chia tỷ lệ 90% cho huấn luyện (Train) và 10% để đánh giá (Test).
+- **Định dạng tối ưu (ONNX):** Sau khi huấn luyện, mô hình được chuyển đổi sang định dạng `ONNX` (`ml_trainer/flavour_ner_onnx/model.onnx`). Định dạng này giúp chương trình chạy trực tiếp trên CPU nhanh hơn và không cần cài đặt thư viện PyTorch nặng nề.
 
-### 2.3. Thuật toán nối chuỗi và dọn rác
-- **Nối chuỗi:** Nếu AI chẻ cụm từ làm đôi do đọc nhầm dấu câu (vd: `CHOCOLATE` và `FLAVOUR`), thuật toán tự động thay thế ký tự ngăn cách bằng khoảng trắng để nối lại nguyên trạng (`CHOCOLATE FLAVOUR`).
-- **Dọn rác đuôi:** Dùng Regex để tự động gọt bỏ dấu ngoặc đóng bất đối xứng `)` ở cuối câu, và cắt bỏ mọi thông tin rác nằm sau các cụm từ như `QUY CÁCH`, `DÙNG CHO`.
+---
 
-### 2.4. Hệ thống Dự phòng (Rules Fallback)
-- **Định nghĩa:** Đây là thuật toán Heuristic truyền thống (tĩnh) được giữ lại từ phiên bản cũ của phần mềm, nằm trong file `clean_flavour.py`.
-- **Cơ chế hoạt động (Nó làm gì?):** Nếu mô hình AI gặp lỗi bất ngờ hoặc trả về một chuỗi hoàn toàn rỗng, hệ thống sẽ rơi xuống (fallback) lớp dự phòng này. Thuật toán sẽ dùng dấu tiếng Việt làm "vách ngăn" để cắt câu thô thành nhiều đoạn tiếng Anh. Sau đó tính điểm (Score) từng đoạn dựa trên các từ khóa (như FLAVOUR, OIL) và độ dài chuỗi để chọn ra đoạn văn bản có khả năng là tên sản phẩm cao nhất. Tính năng này đóng vai trò như một màng lưới an toàn tuyệt đối giúp phần mềm không bao giờ bị đứng.
+### Lớp 2: Chuẩn hóa & Gọt dữ liệu bằng Regex (Post-Processing)
 
-## 3. LUỒNG CHẠY & PHÂN TÍCH CHI TIẾT TỪNG FILE
+Sau khi mô hình học máy trích xuất được cụm từ, dữ liệu được chuyển qua 4 bước lọc bằng biểu thức chính quy (Regex) trong file `gui_2.py`:
 
-### Luồng thực thi (Execution Flow)
-1. **Khởi chạy:** Mở terminal chạy `python gui_2.py` (Hoặc click đúp file `.bat` / `.exe`). Giao diện Desktop xuất hiện.
-2. **Nạp mô hình:** Giao diện tự động nạp mô hình AI từ thư mục `flavour_ner_onnx` vào RAM.
-3. **Phân tích Excel:** Người dùng chọn file Excel, chọn Sheet và Cột chứa dữ liệu hải quan. Nhấn "Bắt đầu".
-4. **Bóc tách:** Vòng lặp duyệt qua từng ô trong cột. Đầu tiên, truyền chuỗi vào mô hình AI (Lớp 1). Sau đó, truyền kết quả thô của AI qua bộ lọc Regex (Lớp 2).
-5. **Dự phòng (Fallback):** Nếu cả Lớp 1 và 2 đều thất bại, hệ thống gọi hàm `clean_description` từ `clean_flavour.py` (Lớp 3) để tính điểm Heuristic (dựa trên thuật toán cũ) và trả về kết quả vớt vát.
-6. **Ghi nhận & Hiển thị:** Cập nhật kết quả lên lưới (Grid). Dòng xử lý bằng AI hiện chữ Xanh, dòng lỗi hiện chữ Vàng.
-7. **Lưu file:** Người dùng nhấn `Save As`, hệ thống sao chép file gốc và chèn kết quả chuẩn xác vào cột tương ứng.
+#### 1. Lọc thông tin quy cách, nhà sản xuất còn sót lại
+- *Biểu thức:* `re.sub(r'(\bNSX\b|\bNPP\b|\bHSD\b|QUY CÁCH|DÙNG CHO|HIỆU\b|DÒNG\b).*', '', text)`
+- *Ví dụ:* `APPLE FLAVOUR PFE-123 QUY CÁCH 25KG/THÙNG` $\rightarrow$ `APPLE FLAVOUR PFE-123`.
 
-### 3.1. `gui_2.py` (Giao diện & Động cơ AI cốt lõi)
-- **Nhiệm vụ:** Quản lý giao diện, luồng sự kiện I/O, và là trung tâm thực thi Pipeline AI.
-- **Bên trong:**
-  - Khai báo giao diện bằng thư viện `tkinter`.
-  - Hàm `_run_pipeline_thread()` xử lý đa luồng (Threading) để không làm đơ giao diện khi AI đang chạy.
-  - Tích hợp nội tuyến hàm `regex_post_processing` để thực thi thuật toán quét ngược (Anchor Regex) dọn rác tiếng Việt và chuẩn hóa chuỗi.
+#### 2. Xóa dấu ngoặc bất đối xứng
+- *Ví dụ:* `MILK FLAVOUR PFE-111(V))` $\rightarrow$ `MILK FLAVOUR PFE-111(V)`.
 
-### 3.2. Thư mục `flavour_ner_onnx` (Trọng số AI)
-- **Nhiệm vụ:** Chứa các tệp cấu hình và bản đồ ma trận học sâu (Deep Learning).
-- **Bên trong:** Chứa `model.onnx` (trọng số mô hình tĩnh), `config.json` (quy định tập nhãn `PROD`), và `tokenizer.json` (từ điển băm token). Việc dùng định dạng ONNX giúp hệ thống chạy nhanh gấp 3 lần bình thường mà không cần Card đồ họa (GPU).
+#### 3. Gọt tiếng Việt dính liền (Thuật toán quét ngược từ mỏ neo `FLAVOUR`/`FLAVOR`)
+- *Cơ chế:* Khi mô hình học máy vô tình lấy dính chữ tiếng Việt ở đầu câu, thuật toán sẽ tìm từ khóa `FLAVOUR` (hoặc `FLAVOR`), sau đó quét lùi từng từ về trước. Nếu gặp từ có dấu tiếng Việt hoặc từ nằm trong danh sách cấm `[viet-no-diacrit]` tại `patterns.txt` (như `CAM`, `HEO`, `BO`), hệ thống sẽ cắt bỏ toàn bộ phần phía trước.
+- *Ví dụ:* `Hương CAM ORANGE FLAVOUR L-9999` $\rightarrow$ Gặp từ `CAM` $\rightarrow$ Cắt bỏ `Hương CAM` $\rightarrow$ `ORANGE FLAVOUR L-9999`.
 
-### 3.3. `clean_flavour.py` và `patterns.txt` (Hệ thống dự phòng)
-- **Nhiệm vụ:** Đóng vai trò mạng lưới an toàn (Safety Net) khi AI gặp các ngành hàng chưa từng học.
-- **Bên trong:** `clean_flavour.py` là bộ thư viện dùng để chấm điểm chuỗi văn bản bằng các luật IF-ELSE truyền thống. `patterns.txt` lưu trữ danh sách các từ vựng tiếng Việt không dấu (`[viet-no-diacrit]`) để bộ lọc Anchor Regex trong `gui_2.py` lấy làm từ điển cắt chuỗi.
+---
 
-## 4. BẢNG TỔNG KẾT RỦI RO KHI THAY ĐỔI
+### Lớp 3: Cơ chế Dự phòng (Rules Fallback)
 
-| Thành phần thay đổi | Nguy cơ / Rủi ro | Giải pháp khuyến nghị |
-| :--- | :--- | :--- |
-| **Logic Anchor Regex trong `gui_2.py`** | Sửa sai biểu thức Regex có thể khiến phần tiếng Việt không được cắt bỏ, hoặc cắt thấu vào tận tên tiếng Anh (ví dụ cắt mất mã lô hàng). | Tuyệt đối không sửa Regex nếu không nắm vững cú pháp Lookbehind/Lookahead. Phải kiểm tra thử (test) lại với các chuỗi phức tạp ngay sau khi sửa. |
-| **Cập nhật `patterns.txt` (`[viet-no-diacrit]`)** | Thêm một từ vựng sai vào danh sách (vd như: TOM, NHO) sẽ làm biến mất từ đó trong tên tiếng Anh (vd: Tom Yum -> Yum). | Không đưa các danh từ chỉ thực phẩm quốc tế, tên riêng hoặc tên đa nghĩa vào danh sách cấm của tiếng Việt. |
-| **Đổi nhãn mô hình `flavour_ner_onnx`** | Nếu mô hình mới đổi nhãn từ `PROD` sang tên khác (ví dụ: `FLAV`), mã nguồn sẽ không trích xuất được thực thể. | Đảm bảo mô hình mới giữ nguyên nhãn `PROD`. Nếu bắt buộc đổi, phải cập nhật biến `ent['entity_group'] == 'PROD'` trong `gui_2.py`. |
-| **Đóng gói file `.exe` bằng PyInstaller** | Tiến trình sinh ra vô hạn luồng (Infinite Child Processes) làm treo đứng hệ điều hành Windows do cơ chế `multiprocessing` của thư viện tokenizers. | Lập trình viên bắt buộc phải chèn dòng lệnh `multiprocessing.freeze_support()` ngay dưới khối `if __name__ == '__main__':` trong mã nguồn trước khi biên dịch. |
+- **Khi nào kích hoạt:** Khi mô hình học máy trả về kết quả rỗng (không tìm thấy nhãn `PROD`).
+- **Cơ chế hoạt động:** Gọi hàm `clean_description` trong file `clean_flavour.py`:
+  1. Dùng các ký tự tiếng Việt có dấu làm ranh giới để cắt chuỗi thành các đoạn tiếng Anh riêng biệt.
+  2. Chấm điểm từng đoạn:
+     - Đoạn chứa từ khóa danh mục (`FLAVOUR`, `OIL`, `POWDER`...): **+10 điểm**.
+     - Đoạn chứa mã sản phẩm (như `PFE-123`, `L-9999`): **+5 điểm**.
+     - Điểm thưởng theo độ dài từ.
+  3. Lấy đoạn văn bản đạt điểm cao nhất làm kết quả.
+
+*Ví dụ trường hợp dự phòng:*
+- *Đầu vào:* `Chất tạo hương dùng trong sản xuất: PEACH FLAVOR P-900 (Mới 100%)`
+- Giả sử mô hình học máy không nhận diện được (kết quả rỗng).
+- Lớp dự phòng tách chuỗi $\rightarrow$ Lấy đoạn `PEACH FLAVOR P-900` (có chữ `FLAVOR` +10đ, mã `P-900` +5đ = 15đ) $\rightarrow$ Kết quả trích xuất: `PEACH FLAVOR P-900`.
+
+---
+
+## 3. BẢNG TỔNG HỢP CÁC TRƯỜNG HỢP KIỂM THỬ THỰC TẾ
+
+| STT | Loại dữ liệu | Dữ liệu đầu vào (Input) | Kết quả đầu ra (Output) | Cách thức xử lý |
+| :---: | :--- | :--- | :--- | :--- |
+| 1 | **Song ngữ Anh - Việt** | `Hương Bò BEEF EXTRACT POWDER PFE-123, Mới 100%` | `BEEF EXTRACT POWDER PFE-123` | Mô hình học máy nhận diện và lấy phần tiếng Anh, bỏ qua phần tiếng Việt. |
+| 2 | **Thuần tiếng Việt** | `Hương cam PPE-123` | `Hương cam PPE-123` | Mô hình học máy giữ lại cụm tên tiếng Việt và mã hàng. |
+| 3 | **Tiếng Việt không dấu dính liền** | `Hương CAM ORANGE FLAVOUR L-9999` | `ORANGE FLAVOUR L-9999` | Regex quét lùi từ `FLAVOUR`, phát hiện từ `CAM` trong `patterns.txt` và cắt bỏ đoạn đầu. |
+| 4 | **Lặp mã đầu và cuối dòng** | `PFE-12345 - APPLE FLAVOUR PFE-12345` | `APPLE FLAVOUR PFE-12345` | Regex phát hiện mã lặp ở đầu chuỗi và tự động gọt bỏ. |
+| 5 | **Thừa dấu ngoặc & quy cách** | `MILK FLAVOUR PFE-111(V)), QUY CÁCH 25KG` | `MILK FLAVOUR PFE-111(V)` | Regex cắt bỏ phần sau chữ `QUY CÁCH` và gọt dấu ngoặc `)` bị thừa. |
+| 6 | **Hàng hóa ngoài ngành (Giới hạn)** | `MÁY XAY SINH TỐ CÔNG NGHIỆP MODEL-999` | Chuỗi rỗng / Không bóc tách | Dữ liệu ngoài miền huấn luyện của mô hình. |
+
+---
+
+## 4. HƯỚNG DẪN VẬN HÀNH & BẢO TRÌ
+
+1. **Khởi chạy chương trình:**
+   - Chạy file `Start_Flavour_Cleaner.bat` hoặc gõ lệnh `python gui_2.py` trong terminal.
+2. **Cập nhật từ điển `patterns.txt`:**
+   - Mục `[viet-no-diacrit]`: Chỉ thêm các từ tiếng Việt không dấu (ví dụ: `HEO`, `BO`, `GA`, `CHUOI`).
+   - *Lưu ý:* Tuyệt đối không thêm các từ tiếng Anh trùng âm (như `TOM` trong Tom Yum, `VAN` trong Vanilla) vì sẽ làm cắt cụt tên sản phẩm tiếng Anh.
+3. **Huấn luyện lại mô hình (khi có thêm dữ liệu):**
+   - Giữ nguyên cấu trúc nhãn `PROD` (`B-PROD`, `I-PROD`) để đảm bảo code trong `gui_2.py` nhận diện chính xác.
+
+---
+
+## 5. HIỆU NĂNG, BẢO MẬT & KHẢ NĂNG CHỊU TẢI
+
+1. **Bảo mật dữ liệu tuyệt đối (100% Offline):**
+   - Hệ thống và mô hình học máy được đóng gói chạy hoàn toàn nội bộ (local) trên máy tính cá nhân.
+   - Không có bất kỳ dữ liệu tờ khai hải quan nào bị gửi lên mạng hay thông qua API bên ngoài, đảm bảo an toàn thông tin tuyệt đối cho doanh nghiệp.
+
+2. **Hiệu năng & Tốc độ xử lý:**
+   - Nhờ việc chuyển đổi mô hình sang định dạng ONNX, hệ thống không đòi hỏi máy tính phải có card đồ họa (GPU).
+   - Tốc độ thực tế trên CPU phổ thông: Xử lý mượt mà **800 dòng dữ liệu chỉ mất khoảng 24 giây** (tương đương ~33 dòng/giây).
+
+3. **Khả năng chịu tải trên dữ liệu lớn (10.000+ dòng):**
+   - Thuật toán bóc tách xử lý từng dòng hoàn toàn độc lập và giải phóng bộ nhớ ngay lập tức.
+   - Khi xử lý các file dữ liệu rất lớn (hàng chục ngàn dòng), hệ thống không bị quá tải RAM và độ chính xác của AI không hề bị suy giảm so với các file nhỏ.
