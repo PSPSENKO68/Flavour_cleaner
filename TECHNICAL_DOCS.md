@@ -51,13 +51,12 @@ Nhằm đánh giá giới hạn của thuật toán, tập dữ liệu `unseen_t
 - **Output:** `MILK FLAVOUR PFE-111(V)`
 - **Giải thích logic:** Lớp 2 tự động phát hiện và loại bỏ dấu `)` bị dư ở cuối cụm từ, đồng thời cắt bỏ thông tin phía sau chuỗi `QUY CÁCH`.
 
-### 3.2. Các trường hợp hệ thống xử lý lỗi và Nguyên nhân
-
-**Ca 4: Thiếu từ khóa mỏ neo (Anchor)**
+**Ca 4: Xử lý chuỗi không chứa mỏ neo (Anchor)**
 - **Input gốc:** `Hương Bò BEEF EXTRACT POWDER PFE-123, Mới 100%`
-- **Output thực tế (Lỗi):** `Hương Bò BEEF EXTRACT POWDER PFE-123`
-- **Giải thích logic:** Do không có từ khóa `FLAVOUR` hoặc `FLAVOR`, cơ chế quét ngược của Lớp 2 không được kích hoạt. Lớp 2 buộc phải giữ nguyên kết quả thô của Lớp 1 (bao gồm cả chữ tiếng Việt).
-- **Khắc phục:** Bổ sung các từ khóa (vd: `POWDER`, `EXTRACT`) vào tập mỏ neo của thuật toán Regex nếu nghiệp vụ mở rộng sang các mặt hàng này.
+- **Output:** `BEEF EXTRACT POWDER PFE-123`
+- **Giải thích logic:** Mặc dù chuỗi không chứa từ khóa `FLAVOUR`/`FLAVOR` để kích hoạt luật gọt tiếng Việt của Regex (Lớp 2), nhưng Lớp 1 (AI NER) thông qua học sâu đã tự động hiểu ngữ cảnh và chỉ đánh dấu (tag) đoạn tiếng Anh `BEEF EXTRACT POWDER PFE-123` là nhãn `PROD`. Từ `Hương Bò` bị loại bỏ ngay từ bước đầu tiên mà không cần đến Regex.
+
+### 3.2. Các trường hợp hệ thống xử lý lỗi và Nguyên nhân
 
 **Ca 5: Cấu hình tệp từ điển sai quy định**
 - **Input gốc:** `Hương Tôm TOM YUM FLAVOUR PFE-555`
