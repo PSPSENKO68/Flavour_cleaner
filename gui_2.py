@@ -464,5 +464,7 @@ class FlavourAI_GUI(tk.Tk):
             self.status_var.set("Lỗi lưu file.")
 
 if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()
     app = FlavourAI_GUI()
     app.mainloop()
