@@ -34,12 +34,17 @@ Toàn bộ dự án được thiết kế chạy Offline hoàn toàn.
 
 ### 2.1. Nhận dạng Thực thể bằng Trí tuệ Nhân tạo (AI - NER)
 Hệ thống sử dụng mô hình học sâu cấu trúc `XLMRobertaForTokenClassification` đã được huấn luyện riêng biệt.
-- **Cơ chế:** Mô hình phân rã văn bản, tính toán xác suất cho từng đoạn nhỏ (token), và gán nhãn `B-PROD` (Bắt đầu sản phẩm) hoặc `I-PROD` (Bên trong sản phẩm). Thư viện AI sẽ tự động gom các token này thành cụm từ hoàn chỉnh.
+- **Quy trình Huấn luyện (Training):** Mô hình được tinh chỉnh (fine-tuned) từ bản gốc `xlm-roberta-base`. Hàng ngàn dữ liệu hải quan (synthetic data) được tạo ra và gán nhãn thủ công (`B-PROD` cho từ bắt đầu sản phẩm, `I-PROD` cho các từ bên trong). Quá trình huấn luyện diễn ra qua 15 chu kỳ (epochs) bằng framework PyTorch, sau đó xuất ra định dạng ONNX để tăng tốc độ xử lý cục bộ.
+- **Cơ chế:** Mô hình phân rã văn bản, tính toán xác suất cho từng đoạn nhỏ (token), và gán nhãn `B-PROD` hoặc `I-PROD`. Thư viện AI sẽ tự động gom các token này thành cụm từ hoàn chỉnh.
 - **Sức mạnh ngữ cảnh:** Nhờ cơ chế học sâu, AI có khả năng tự động phớt lờ các cụm từ tiếng Việt không liên quan.
   - *Ví dụ:* `Hương Bò BEEF EXTRACT POWDER PFE-123` -> Trích xuất: `BEEF EXTRACT POWDER PFE-123` (Không cần dùng luật cắt tiếng Việt).
 
 ### 2.2. Thuật toán gọt tiếng Việt bằng Biểu thức chính quy (Anchor Regex)
-Vì mô hình AI thỉnh thoảng bắt nhầm một từ tiếng Việt liền kề vào cụm tiếng Anh, thuật toán Regex (trong `gui_2.py`) hoạt động như một lớp màng lọc:
+Vì mô hình AI thỉnh thoảng bắt nhầm một từ tiếng Việt liền kề vào cụm tiếng Anh, thuật toán Regex (trong `gui_2.py`) hoạt động như một lớp màng lọc. Dưới đây là các biểu thức cụ thể được áp dụng:
+- **Biểu thức dọn rác quy cách:** `re.sub(r'(\bNSX\b|\bNPP\b|\bHSD\b|QUY CÁCH|DÙNG CHO|HIỆU\b|DÒNG\b).*', '', text, flags=re.IGNORECASE)` (Tự động xóa bỏ mọi thứ nằm sau các từ khóa này).
+- **Biểu thức nhận diện dấu tiếng Việt:** `re.search(r'[áàảãạăắằẳẵặâấầ...ýỳỷỹỵđ]', word, re.IGNORECASE)` (Quét xem một từ có chứa ký tự tiếng Việt đặc thù hay không).
+
+Cách thuật toán phối hợp các biểu thức trên để gọt tiếng Việt:
 1. **Tìm mỏ neo (Anchor):** Xác định vị trí chữ `FLAVOUR` hoặc `FLAVOR` trong chuỗi kết quả.
 2. **Quét ngược:** Từ vị trí mỏ neo, quét ngược về đầu câu từng từ một.
 3. **Chặn và Cắt:** Dừng lại ngay lập tức khi phát hiện từ chứa dấu tiếng Việt (vd: chữ `Hương`), hoặc từ nằm trong danh sách cấm `[viet-no-diacrit]` (vd: chữ `CAM`, chữ `HEO`). Toàn bộ phần chuỗi từ điểm dừng hất về trước sẽ bị cắt bỏ.
@@ -51,6 +56,10 @@ Vì mô hình AI thỉnh thoảng bắt nhầm một từ tiếng Việt liền 
 ### 2.3. Thuật toán nối chuỗi và dọn rác
 - **Nối chuỗi:** Nếu AI chẻ cụm từ làm đôi do đọc nhầm dấu câu (vd: `CHOCOLATE` và `FLAVOUR`), thuật toán tự động thay thế ký tự ngăn cách bằng khoảng trắng để nối lại nguyên trạng (`CHOCOLATE FLAVOUR`).
 - **Dọn rác đuôi:** Dùng Regex để tự động gọt bỏ dấu ngoặc đóng bất đối xứng `)` ở cuối câu, và cắt bỏ mọi thông tin rác nằm sau các cụm từ như `QUY CÁCH`, `DÙNG CHO`.
+
+### 2.4. Hệ thống Dự phòng (Rules Fallback)
+- **Định nghĩa:** Đây là thuật toán Heuristic truyền thống (tĩnh) được giữ lại từ phiên bản cũ của phần mềm, nằm trong file `clean_flavour.py`.
+- **Cơ chế hoạt động (Nó làm gì?):** Nếu mô hình AI gặp lỗi bất ngờ hoặc trả về một chuỗi hoàn toàn rỗng, hệ thống sẽ rơi xuống (fallback) lớp dự phòng này. Thuật toán sẽ dùng dấu tiếng Việt làm "vách ngăn" để cắt câu thô thành nhiều đoạn tiếng Anh. Sau đó tính điểm (Score) từng đoạn dựa trên các từ khóa (như FLAVOUR, OIL) và độ dài chuỗi để chọn ra đoạn văn bản có khả năng là tên sản phẩm cao nhất. Tính năng này đóng vai trò như một màng lưới an toàn tuyệt đối giúp phần mềm không bao giờ bị đứng.
 
 ## 3. LUỒNG CHẠY & PHÂN TÍCH CHI TIẾT TỪNG FILE
 
