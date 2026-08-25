@@ -253,6 +253,46 @@ class FlavourAI_GUI(tk.Tk):
                 text += ')'
             elif ')' in text and '(' not in text:
                 text = text.replace(')', '')
+            text = re.sub(r'\)\)+$', ')', text)
+            
+            # --- CẮT TIẾNG VIỆT, CHỈ GIỮ TIẾNG ANH ---
+            # Đọc danh sách từ tiếng Việt không dấu từ patterns.txt [viet-no-diacrit]
+            viet_no_diacrit = set()
+            patterns_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "patterns.txt")
+            if os.path.exists(patterns_path):
+                in_section = False
+                with open(patterns_path, encoding='utf-8') as pf:
+                    for line in pf:
+                        line = line.strip()
+                        if line == '[viet-no-diacrit]':
+                            in_section = True
+                            continue
+                        if line.startswith('[') and in_section:
+                            break
+                        if in_section and line and not line.startswith('#'):
+                            viet_no_diacrit.add(line.upper())
+            # Tìm FLAVOUR/FLAVOR làm mỏ neo, quét ngược giữ từ ASCII (tiếng Anh), bỏ từ có dấu (tiếng Việt)
+            flavor_match = re.search(r'\b(FLAVOU?R)\b', text, re.IGNORECASE)
+            if flavor_match:
+                before = text[:flavor_match.start()]
+                after = text[flavor_match.start():]
+                words = before.split()
+                english_start = len(words)  # mặc định: bắt đầu từ FLAVOUR
+                for i in range(len(words) - 1, -1, -1):
+                    word = words[i]
+                    # Nếu từ nằm trong danh sách tiếng Việt không dấu -> dừng
+                    if word.upper() in viet_no_diacrit:
+                        break
+                    # Kiểm tra từ có phải thuần ASCII không (A-Z, a-z, 0-9, dấu gạch)
+                    if all(ord(c) < 128 for c in word):
+                        english_start = i
+                    else:
+                        break  # Gặp từ tiếng Việt có dấu -> dừng
+                if english_start < len(words):
+                    text = ' '.join(words[english_start:]) + ' ' + after
+                else:
+                    text = after
+                text = text.strip()
                 
             return text.strip()
 

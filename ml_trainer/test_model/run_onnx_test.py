@@ -49,6 +49,45 @@ def regex_post_processing(text):
         text += ')'
     elif ')' in text and '(' not in text:
         text = text.replace(')', '')
+    text = re.sub(r'\)\)+$', ')', text)
+    
+    # --- CẮT TIẾNG VIỆT, CHỈ GIỮ TIẾNG ANH ---
+    # Đọc danh sách từ tiếng Việt không dấu từ patterns.txt [viet-no-diacrit]
+    viet_no_diacrit = set()
+    patterns_path = os.path.join(BASE_DIR, "patterns.txt")
+    if os.path.exists(patterns_path):
+        in_section = False
+        with open(patterns_path, encoding='utf-8') as pf:
+            for line in pf:
+                line = line.strip()
+                if line == '[viet-no-diacrit]':
+                    in_section = True
+                    continue
+                if line.startswith('[') and in_section:
+                    break
+                if in_section and line and not line.startswith('#'):
+                    viet_no_diacrit.add(line.upper())
+    # Tìm FLAVOUR/FLAVOR làm mỏ neo, quét ngược giữ từ ASCII (tiếng Anh), bỏ từ có dấu (tiếng Việt)
+    flavor_match = re.search(r'\b(FLAVOU?R)\b', text, re.IGNORECASE)
+    if flavor_match:
+        before = text[:flavor_match.start()]
+        after = text[flavor_match.start():]
+        words = before.split()
+        english_start = len(words)
+        for i in range(len(words) - 1, -1, -1):
+            word = words[i]
+            # Nếu từ nằm trong danh sách tiếng Việt không dấu -> dừng
+            if word.upper() in viet_no_diacrit:
+                break
+            if all(ord(c) < 128 for c in word):
+                english_start = i
+            else:
+                break
+        if english_start < len(words):
+            text = ' '.join(words[english_start:]) + ' ' + after
+        else:
+            text = after
+        text = text.strip()
         
     return text.strip()
 

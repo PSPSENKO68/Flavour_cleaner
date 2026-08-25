@@ -1,23 +1,8 @@
 Total rows: 831
-Exact match: 818 (98.44%)
-Differences: 13 (1.56%)
+Exact match: 825 (99.28%)
+Differences: 6 (0.72%)
 
 --- DIFFERENCES (Top 20) ---
-Row 31:
-  Input:    PFE-18610-SEAWEED FLAVOUR POWDER PFE-18610
-  Expected: PFE-18610-SEAWEED FLAVOUR POWDER PFE-18610
-  Model:    SEAWEED FLAVOUR POWDER PFE-18610
---------------------------------------------------
-Row 75:
-  Input:    Tonkotsu Flavour AC-4786(V) - Hương Tonkotsu dùng sản xuất thực phẩm. 15kg/can, hạn sử dụng 11/12/2025
-  Expected: Tonkotsu Flavour AC-4786(V))
-  Model:    Tonkotsu Flavour AC-4786(V)
---------------------------------------------------
-Row 144:
-  Input:    1180120 - Hương VANILLA HFE-14445( có chứa cồn, ngày sản xuất: 27/02/2025, hạn sử dụng: 26/02/2026, nguyên liệu dùng để sản xuất bánh kẹo)
-  Expected: VANILLA HFE-14445
-  Model:    Hương VANILLA HFE-14445
---------------------------------------------------
 Row 152:
   Input:    PHỤ GIA THỰC PHẨM: HƯƠNG LIỆU THỰC PHẨM: HƯƠNG MATCHA - MATCHA FLAVOUR PFE-15270, dùng cho thực phẩm. Batch No: 11CD1025, NSX: 10/03/2025, HSD:09/03/2026, quy cách 25Kg/Drum. Mới 100%.
   Expected: FLAVOUR PFE-15270
@@ -28,25 +13,10 @@ Row 165:
   Expected: VANILLA HFE-11760
   Model:    Hương VANILLA HFE-11760
 --------------------------------------------------
-Row 179:
-  Input:    PHỤ GIA THỰC PHẨM: HƯƠNG SÔCÔLA PFE-20106 CHOCOLATE FLAVOUR PFE-20106, dùng cho thực phẩm. Batch No: 35DD1125, NSX: 11/04/2025, HSD:10/04/2026, quy cách 25Kg/Drum. Mới 100%.
-  Expected: PFE-20106 CHOCOLATE FLAVOUR PFE-20106
-  Model:    CHOCOLATE FLAVOUR PFE-20106
---------------------------------------------------
-Row 264:
-  Input:    1180120 - Hương VANILLA HFE-14445( có chứa cồn, ngày sản xuất: 09/07/2025, hạn sử dụng: 08/07/2026, nguyên liệu dùng để sản xuất bánh kẹo)
-  Expected: VANILLA HFE-14445
-  Model:    Hương VANILLA HFE-14445
---------------------------------------------------
 Row 331:
   Input:    1180298 - Hương VANILLA HFE-11760( có chứa cồn, ngày sản xuất: 02/09/2025, hạn sử dụng: 01/09/2026, nguyên liệu dùng để sản xuất bánh kẹo tại nội bộ công ty)
   Expected: VANILLA HFE-11760
   Model:    Hương VANILLA HFE-11760
---------------------------------------------------
-Row 359:
-  Input:    1180120 - Hương VANILLA HFE-14445( có chứa cồn, ngày sản xuất: 14/10/2025, hạn sử dụng: 13/10/2026, nguyên liệu dùng để sản xuất bánh kẹo)
-  Expected: VANILLA HFE-14445
-  Model:    Hương VANILLA HFE-14445
 --------------------------------------------------
 Row 401:
   Input:    1180298 - Hương VANILLA HFE-11760( có chứa cồn, ngày sản xuất: 12/11/2025, hạn sử dụng: 11/11/2026, nguyên liệu dùng để sản xuất bánh kẹo tại nội bộ công ty)
@@ -62,9 +32,4 @@ Row 510:
   Input:    PHỤ GIA THỰC PHẨM: HƯƠNG LIỆU THỰC PHẨM: HƯƠNG MATCHA - MATCHA FLAVOUR PFE-15270, dùng cho thực phẩm. Batch No: 30AD1326, NSX: 13/01/2026, HSD:12/01/2027, quy cách 25Kg/Drum. Mới 100%.
   Expected: FLAVOUR PFE-15270
   Model:    MATCHA FLAVOUR PFE-15270
---------------------------------------------------
-Row 547:
-  Input:    1180120 - Hương VANILLA HFE-14445( có chứa cồn, ngày sản xuất: 28/02/2026, hạn sử dụng: 27/02/2027, nguyên liệu dùng để sản xuất bánh kẹo tại nội bộ công ty)
-  Expected: VANILLA HFE-14445
-  Model:    Hương VANILLA HFE-14445
 --------------------------------------------------

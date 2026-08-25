@@ -142,3 +142,47 @@ NGUYEN LIEU SAN XUAT CHE BIEN
 DUNG TRONG DE CHO CUA VA CAC LOAI
 CONG NGHIEP DANG LONG
 KO SX GOI LAM CHAI CAN THUNG
+
+# ---------------------------------------------------------------------------
+# Từ tiếng Việt KHÔNG DẤU thường xuất hiện trước tên sản phẩm tiếng Anh.
+# Dùng để cắt bỏ phần tiếng Việt, chỉ giữ lại tên tiếng Anh.
+# Mỗi từ một dòng, VIẾT HOA.
+# LƯU Ý: KHÔNG thêm TOM (vì Tom Yum là tiếng Thái, không phải tiếng Việt)
+# ---------------------------------------------------------------------------
+[viet-no-diacrit]
+XANH
+CAM
+VANI
+HEO
+GA
+BO
+DUA
+TAO
+DAU
+SUA
+TRA
+MON
+CHUOI
+XA
+HANH
+CHANH
+MAN
+BUOI
+NAM
+CUA
+CA
+GIA
+VI
+ME
+OI
+TIEU
+OT
+GUNG
+QUE
+HOA
+MAT
+KEO
+BANH
+HUONG
+H
+MOI
