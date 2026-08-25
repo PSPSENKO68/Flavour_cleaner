@@ -33,8 +33,11 @@ Toàn bộ dự án được thiết kế chạy Offline hoàn toàn.
 ## 2. CƠ CHẾ XỬ LÝ NGÔN NGỮ & THUẬT TOÁN ĐẶC BIỆT
 
 ### 2.1. Nhận dạng Thực thể bằng Học máy (Machine Learning - NER)
-Hệ thống sử dụng mô hình học sâu cấu trúc `XLMRobertaForTokenClassification` đã được huấn luyện riêng biệt.
-- **Quy trình Huấn luyện (Training):** Mô hình được tinh chỉnh (fine-tuned) từ bản gốc `xlm-roberta-base`. Hàng ngàn dữ liệu hải quan (synthetic data) được tạo ra và gán nhãn thủ công (`B-PROD` cho từ bắt đầu sản phẩm, `I-PROD` cho các từ bên trong). Quá trình huấn luyện diễn ra qua 15 chu kỳ (epochs) bằng framework PyTorch, sau đó xuất ra định dạng ONNX để tăng tốc độ xử lý cục bộ.
+Hệ thống sử dụng mô hình học sâu cấu trúc PhoBERT (`vinai/phobert-base`) vì đây là mô hình tối ưu nhất cho việc phân tích ngữ cảnh tiếng Việt lẫn tiếng Anh.
+- **Quy trình Huấn luyện (Training):** Toàn bộ quy trình được xây dựng trong notebook `ml_trainer/train_flavour_model.ipynb` và chạy trên Google Colab (T4 GPU).
+  - *Dữ liệu:* Tập dữ liệu `training_data.jsonl` được sinh ra tự động và gán nhãn thủ công (`B-PROD` cho từ bắt đầu sản phẩm, `I-PROD` cho các từ bên trong).
+  - *Huấn luyện:* Chia tập dữ liệu theo tỷ lệ 90% Train / 10% Test. Sử dụng framework PyTorch và thư viện Transformers Trainer để tinh chỉnh (fine-tune) qua 15 chu kỳ (epochs) với learning_rate=3e-5, batch_size=16.
+  - *Xuất bản:* Sau khi train xong, mô hình gốc nặng nề được convert sang định dạng ONNX (bằng `optimum-cli`) để loại bỏ hoàn toàn sự phụ thuộc vào thư viện PyTorch, giúp tăng tốc độ xử lý khi chạy file `.exe` trên máy tính cá nhân.
 - **Cơ chế:** Mô hình phân rã văn bản, tính toán xác suất cho từng đoạn nhỏ (token), và gán nhãn `B-PROD` hoặc `I-PROD`. Thư viện AI sẽ tự động gom các token này thành cụm từ hoàn chỉnh.
 - **Sức mạnh ngữ cảnh:** Nhờ cơ chế học sâu, AI có khả năng tự động phớt lờ các cụm từ tiếng Việt không liên quan.
   - *Ví dụ:* `Hương Bò BEEF EXTRACT POWDER PFE-123` -> Trích xuất: `BEEF EXTRACT POWDER PFE-123` (Không cần dùng luật cắt tiếng Việt).
