@@ -71,7 +71,31 @@ for i in range(100):
         "Expected_Output": flavour_str
     })
 
+# --- TRICKY & EDGE CASES DÀNH CHO SẾP ---
+edge_cases = [
+    # 1. Tricky nhưng thành công: Mã code bị lặp lại ở đầu
+    {"Input": "PFE-12345 - APPLE FLAVOUR PFE-12345, HÀNG MỚI", "Expected_Output": "APPLE FLAVOUR PFE-12345"},
+    # 2. Tricky nhưng thành công: Dính liền tiếng Việt không dấu (CAM) nhưng đã được filter qua patterns.txt
+    {"Input": "Hương CAM ORANGE FLAVOUR L-9999", "Expected_Output": "ORANGE FLAVOUR L-9999"},
+    # 3. Tricky nhưng thành công: Dấu phẩy xen giữa chữ do lỗi AI chẻ từ
+    {"Input": "CHẤT TẠO HƯƠNG CHOCOLATE, FLAVOUR PFE-888", "Expected_Output": "CHOCOLATE FLAVOUR PFE-888"},
+    # 4. Tricky nhưng thành công: Ngoặc kép dư thừa ở cuối
+    {"Input": "HƯƠNG SỮA MILK FLAVOUR PFE-111(V)), QUY CÁCH 25KG", "Expected_Output": "MILK FLAVOUR PFE-111(V)"},
+    
+    # 5. THẤT BẠI: Thiếu mỏ neo FLAVOUR/FLAVOR (AI lấy luôn tiếng Việt nếu không có mỏ neo để Regex gọt)
+    {"Input": "Hương Bò BEEF EXTRACT POWDER PFE-123, Mới 100%", "Expected_Output": "BEEF EXTRACT POWDER PFE-123"},
+    
+    # 6. THẤT BẠI: Ngành hàng hoàn toàn mới (Máy móc) - AI chưa từng học
+    {"Input": "MÁY XAY SINH TỐ CÔNG NGHIỆP BLENDER MODEL-999", "Expected_Output": "BLENDER MODEL-999"},
+    
+    # 7. THẤT BẠI (Rủi ro cấu hình sai): Nếu đưa nhầm từ TOM vào patterns.txt, chữ TOM YUM sẽ bị cắt mất TOM. 
+    # Nhưng vì ta KHÔNG đưa vào, nên AI vẫn giữ được, nhưng có thể dính chữ Tôm tiếng Việt nếu AI bốc nhầm.
+    {"Input": "Hương Tôm TOM YUM FLAVOUR PFE-555", "Expected_Output": "TOM YUM FLAVOUR PFE-555"}
+]
+
+data.extend(edge_cases)
+
 df = pd.DataFrame(data)
 output_path = r"C:\Users\duy.nguyenhk\Downloads\flavour-cleaner_improve\ml_trainer\test_model\unseen_test_data.xlsx"
 df.to_excel(output_path, index=False)
-print(f"Đã tạo thành công {len(df)} dòng dữ liệu tại: {output_path}")
+print(f"Đã tạo thành công {len(df)} dòng dữ liệu (bao gồm các Edge Cases) tại: {output_path}")
