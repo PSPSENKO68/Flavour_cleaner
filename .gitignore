@@ -1,0 +1,13 @@
+# Environments
+.venv/
+__pycache__/
+
+# Models (Too large for GitHub)
+ml_trainer/model_*/
+ml_trainer/flavour_ner_model/
+
+# Build artifacts
+build/
+dist/
+*.spec
+ml_trainer/flavour_ner_onnx/

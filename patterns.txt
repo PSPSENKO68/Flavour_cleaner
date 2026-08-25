@@ -1,0 +1,144 @@
+# ============================================================================
+#  VOCABULARY FILE  --  edit this, not the Python.
+# ============================================================================
+#
+#  Everything here is matched WITHOUT accents and IGNORING case.
+#  So writing   HANG MAU   also matches   HÀNG MẪU / hàng mẫu / Hàng Mẫu.
+#  You never need to type Vietnamese accents in this file.
+#
+#  Lines starting with #  are comments.  Blank lines are ignored.
+#  Spacing is flexible: "MOI 100%" also matches "MOI100%" and "MOI  100 %".
+#
+#  After editing, re-run the script. To check you did not break anything:
+#      python3 test_clean.py
+#
+# ============================================================================
+
+
+[product-keywords]
+# ---------------------------------------------------------------------------
+# The words that mark a span of English text as the actual PRODUCT NAME.
+# A description often holds the Vietnamese name and the English name side by
+# side; these keywords are how the script tells which span is the answer:
+#
+#   "Hương dầu hành, không chứa cồn - Fried Onion Oil FE-2002 dùng để sx bánh"
+#                                     ^^^^^^^^^^^^^^^^^^^^^^^ picked, has OIL
+#
+# ADD A LINE HERE if a product type keeps ending up in the Review sheet.
+# ---------------------------------------------------------------------------
+FLAVOUR
+FLAVOR
+FLAVOURS
+FLAVORS
+OIL
+POWDER
+EXTRACT
+ESSENCE
+SEASONING
+AROMA
+PASTE
+JUICE
+CONCENTRATE
+EMULSION
+BASE
+WONF
+
+[metadata]
+# ---------------------------------------------------------------------------
+# A comma-separated chunk containing ANY of these is thrown away entirely.
+# These are the "not the product name" clauses: manufacturer, packing,
+# condition, dates, weights.
+#
+# ADD A LINE HERE when you see a trailing clause that should be deleted.
+# ---------------------------------------------------------------------------
+NSX
+HSX
+NPP
+NHA SAN XUAT
+NGAY SAN XUAT
+HANG MAU
+MOI 100%
+HANG MOI
+HANG CHUA QUA SU DUNG
+HAN SU DUNG
+HSD
+LOT NO
+CAS NO
+BATCH NO
+HIEU
+# Exporter and brand names. These are stripped so they are never mistaken for
+# a product name. Add whichever suppliers appear in YOUR declarations - the
+# entry below suits one exporter and does nothing for anyone else's file.
+re:HASEGAWA
+SDN
+BHD
+NHAN HIEU
+QUY CACH
+DONG GOI
+TRONG LUONG
+KHOI LUONG
+DUNG TICH
+THE TICH
+XUAT XU
+DIEU KIEN BAO QUAN
+KHONG NHAN HIEU
+NHAN HIEU
+
+# Regex entries are allowed too - prefix them with "re:".
+re:\bMOI\b\s*\d{2,3}\s*%
+re:^\s*TK\s*\d
+re:^\s*[\d.,]+\s*(KG|G|ML|L|LIT|CHAI|LO|TUYP|THUNG|HOP)\b
+
+
+[descriptors]
+# ---------------------------------------------------------------------------
+# Vietnamese category wording removed from the FRONT of the product name.
+# These describe WHAT KIND of thing it is, not which product it is.
+#
+# ADD A LINE HERE when a Vietnamese prefix is left on your cleaned names.
+# Longer phrases first - they are tried in the order written.
+# ---------------------------------------------------------------------------
+CHAT TAO HUONG
+CHAT TAO MAU
+CHAT TAO NGOT
+CHAT TAO VI
+CHAT PHU GIA
+CHAT BAO QUAN
+CHAT ON DINH
+CHAT NHU HOA
+CHAT CHONG OXY HOA
+HUONG LIEU THUC PHAM
+HUONG LIEU
+PHU GIA THUC PHAM
+PHU GIA
+NGUYEN LIEU SAN XUAT
+NGUYEN LIEU THUC PHAM
+NGUYEN LIEU
+HON HOP HUONG LIEU
+HON HOP
+TINH DAU
+BOT HUONG
+DUNG TRONG
+DUNG DE
+DUNG CHO
+HUONG
+HUONG DANG BOT
+
+
+[vietnamese-words]
+# ---------------------------------------------------------------------------
+# Vietnamese words that carry NO accent, so the script cannot otherwise tell
+# them apart from English. Only used while trimming the front of the name and
+# inside brackets - never in the middle of a product name.
+#
+# NEVER add a food noun here (TOM, CAM, NHO, GA...). Those collide with real
+# product names - listing TOM once cut "Tom Yum Flavour SCF-2001" down to
+# "Yum Flavour SCF-2001". Only structural words belong here: packaging, form,
+# purpose, and category wording.
+# ---------------------------------------------------------------------------
+CHAT TAO HUONG MAU NGOT
+HON HOP PHU GIA THUC PHAM
+NGUYEN LIEU SAN XUAT CHE BIEN
+DUNG TRONG DE CHO CUA VA CAC LOAI
+CONG NGHIEP DANG LONG
+KO SX GOI LAM CHAI CAN THUNG
